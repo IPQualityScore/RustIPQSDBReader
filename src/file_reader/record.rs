@@ -260,7 +260,7 @@ impl Record {
                     let mut value = Default::default();
                     if column.record_type.has(flag::STRING_DATA) {
                         let offset = utility::four_byte_int(&raw[current_byte..current_byte + 4]);
-                        value = FileReader::get_ranged_string_value(&mut file.reader, offset)?;
+                        value = FileReader::get_ranged_string_value(&file, offset)?;
                         record.columns.push(Column {
                             name: column.name.clone(),
                             record_type: BinaryOption {

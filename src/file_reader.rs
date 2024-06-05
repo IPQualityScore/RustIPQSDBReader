@@ -1,4 +1,3 @@
-// Copyright IPQualityScore LLC 2023
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
@@ -31,7 +30,7 @@ const BINARY_DATA: u8 = 0b1000_0000;
 /// [IPQualityScore Flat File Database documentation](https://www.ipqualityscore.com/documentation/ip-reputation-database/overview)
 #[derive(Debug)]
 pub struct FileReader {
-    reader: BufReader<File>,
+    raw_db: Vec<u8>,
     record_bytes: usize,
     tree_start: u64,
     tree_end: u64,
@@ -42,6 +41,19 @@ pub struct FileReader {
 }
 
 impl FileReader {
+    pub fn get_raw_db(&self) -> &Vec<u8> {
+        &self.raw_db
+    }
+
+    fn safe_copy_slice(&self, start: usize, length: usize) -> Result<Vec<u8>, &'static str> {
+        let end = start + length;
+        if end <= self.raw_db.len() {
+            Ok(self.raw_db[start..end].to_vec())
+        } else {
+            Err("Error: file_position out of bounds or not enough bytes to copy.")
+        }
+    }
+
     /// Opens the file at `Path` for reading and returns a FileReader interface
     /// ```
     /// use std::{error, path::PathBuf};
@@ -55,8 +67,12 @@ impl FileReader {
         let file = File::open(file_path)?;
         let mut reader = BufReader::new(file);
 
-        //---------------- METADATA BEGIN
+        // load database to memory
+        let mut raw_db = Vec::new();
+        reader.read_to_end(&mut raw_db)?;
+        reader.seek(SeekFrom::Start(0))?;
 
+        //---------------- METADATA BEGIN
         // first 11 bytes reserved for file metadata
         let mut header = [0; 11];
         reader.read_exact(&mut header)?;
@@ -148,7 +164,7 @@ impl FileReader {
         let tree_end: u64 = tree_start + total_tree;
 
         Ok(FileReader {
-            reader,
+            raw_db,
             binary_data,
             is_v6,
             // is_valid,
@@ -216,8 +232,9 @@ impl FileReader {
                 // somehow we went through the whole binary representation without finding a record
                 return Err("invalid or nonexistent IP specified for lookup (EID 9)".into());
             }
-            self.reader.seek(SeekFrom::Start(file_position))?;
-            self.reader.read_exact(&mut node)?;
+            let node_copy = self.safe_copy_slice(file_position as usize, 8)?;
+            node.copy_from_slice(&node_copy);
+
             if binary_representation[position] {
                 // bit is 1 - go right
                 file_position = utility::four_byte_int(&node[4..8]);
@@ -256,9 +273,7 @@ impl FileReader {
             }
 
             // -------- Record found
-            let mut raw: Vec<u8> = vec![0; self.record_bytes];
-            self.reader.seek(SeekFrom::Start(file_position))?;
-            self.reader.read_exact(&mut raw)?;
+            let raw = self.safe_copy_slice(file_position as usize, self.record_bytes)?;
             let record = self::record::Record::parse(raw, self)?;
             return Ok(record);
         }
@@ -266,15 +281,12 @@ impl FileReader {
     }
 
     fn get_ranged_string_value(
-        reader: &mut BufReader<File>,
+        reader: &FileReader,
         offset: u64,
     ) -> Result<String, Box<dyn Error>> {
-        reader.seek(SeekFrom::Start(offset))?;
-        let mut size_buf: Vec<u8> = vec![0; 1];
-        reader.read_exact(&mut size_buf)?;
+        let size_buf = reader.safe_copy_slice(offset as usize, 1)?;
         let size: usize = usize::from(size_buf[0]);
-        let mut raw: Vec<u8> = vec![0; size];
-        reader.read_exact(&mut raw)?;
+        let raw = reader.safe_copy_slice(offset as usize + 1, size)?;
         let value = String::from_utf8(raw)?;
 
         Ok(value)
