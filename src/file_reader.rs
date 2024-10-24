@@ -3,9 +3,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, Ipv6MulticastScope, Ipv6MulticastScopeError, Ipv6MulticastScopeResult, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs, UdpSocket};
+use std::net::IpAddr;
 use std::path::Path;
-use std::str::FromStr;
 
 use crate::binary_option as flag;
 use crate::binary_option::BinaryOption;
@@ -185,10 +184,8 @@ impl FileReader {
             return Err("attempted to fetch IPv6 record using IPv4 data file".into());
         }
 
-        if ip.is_ipv4() {
-            let subnet = "0.0.0.0/8".parse::<IpNetwork>().unwrap();
-            let incoming_ip = ip.parse::<IpAddr>().unwrap();
-            if subnet.contains(&incoming_ip) {
+        if let IpAddr::V4(ip) = ip {
+            if ip.octets()[0] == 0 {
                 return Err("Attempted to look up ip in 0.0.0.0/8 range. Aborting.".into());
             }
         }
