@@ -218,6 +218,14 @@ ipqs_db_reader = { version = "1.0.0", default-features = false, }
                         </td>
                     </tr>
                     <tr>
+						<td><code>pub fn zipcode(&amp;self) -&gt; Option&lt;f32&gt;</code></td>
+						<td>
+                            <p>
+                                Suspected Zipcode of the IP address if available or empty string if unknown.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
 						<td><code>pub fn latitude(&amp;self) -&gt; Option&lt;f32&gt;</code></td>
 						<td>
                             <p>

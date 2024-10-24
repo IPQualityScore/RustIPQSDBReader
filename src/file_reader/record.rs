@@ -34,6 +34,8 @@ pub struct Record {
     region: Option<String>,
     isp: Option<String>,
     organization: Option<String>,
+    zipcode: Option<String>,
+    hostname: Option<String>,
     asn: Option<u64>,
     timezone: Option<String>,
     latitude: Option<f32>,
@@ -69,6 +71,8 @@ City: {:#?}
 Region: {:#?}
 ISP: {:#?}
 Organization: {:#?}
+Zipcode: {:#?}
+Hostname: {:#?}
 ASN: {:#?}
 Timezone: {:#?}
 Latitude: {:#?}
@@ -99,6 +103,8 @@ Public Access Point: {:#?}",
             self.region,
             self.isp,
             self.organization,
+            self.zipcode,
+            self.hostname,
             self.asn,
             self.timezone,
             self.latitude,
@@ -405,6 +411,20 @@ impl Record {
     pub fn timezone(&self) -> Option<&str> {
         if self.timezone.is_some() {
             return self.timezone.as_deref();
+        }
+        None
+    }
+
+    pub fn zipcode(&self) -> Option<&str> {
+        if self.zipcode.is_some() {
+            return self.zipcode.as_deref();
+        }
+        None
+    }
+
+    pub fn hostname(&self) -> Option<&str> {
+        if self.hostname.is_some() {
+            return self.hostname.as_deref();
         }
         None
     }
