@@ -1,4 +1,4 @@
-// Copyright 2023 IPQualityScore LLC
+// Copyright 2026 IPQualityScore LLC
 
 pub const CONNECTION_MASK: u8 = 0b0011_1000; // mask three connection bits
 pub const ABUSE_VELOCITY_MASK: u8 = 0b1100_0000; // mask two abuse velocity bits

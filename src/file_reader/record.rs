@@ -1,4 +1,4 @@
-// Copyright 2023 IPQualityScore LLC
+// Copyright 2026 IPQualityScore LLC
 use crate::binary_option as flag;
 use crate::binary_option::BinaryOption;
 use crate::column::Column;
@@ -262,10 +262,16 @@ impl Record {
                     });
                     current_byte += 1;
                 }
-                _ => {
+                column_name => {
                     let mut value = Default::default();
                     if column.record_type.has(flag::STRING_DATA) {
-                        let offset = utility::four_byte_int(&raw[current_byte..current_byte + 4]);
+                        let offset = if file.version == 1 {
+                            utility::four_byte_int(&raw[current_byte..current_byte + 4])
+                        } else if file.version == 2 {
+                            utility::eight_byte_int(&raw[current_byte..current_byte + 8])
+                        } else {
+                            unreachable!()
+                        };
                         value = FileReader::get_ranged_string_value(&mut file.reader, offset)?;
                         record.columns.push(Column {
                             name: column.name.clone(),
@@ -274,7 +280,7 @@ impl Record {
                             },
                             value: value.clone(),
                         });
-                        current_byte += 4;
+                        current_byte += if file.version == 1 { 4 } else if file.version == 2 { 8 } else { unreachable!() };
                     };
                     match column.name.as_str() {
                         "Country" => {
@@ -295,8 +301,14 @@ impl Record {
                         "Timezone" => {
                             record.timezone = Some(value);
                         }
+                        "Zipcode" => {
+                            record.zipcode = Some(value);
+                        }
+                        "Hostname" => {
+                            record.hostname = Some(value);
+                        }
                         _ => {
-                            return Err("failed to parse string data (EID 13)".into());
+                            return Err(format!("failed to parse string data (EID 13) {} {}", column.name, value).into());
                         }
                     }
                 }

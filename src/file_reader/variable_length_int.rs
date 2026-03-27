@@ -1,4 +1,4 @@
-// Copyright 2023 IPQualityScore LLC
+// Copyright 2026 IPQualityScore LLC
 
 // This is a minimal reimplementation (from scratch) of Go's binary.Uvarint
 // That source available here: https://cs.opensource.google/go/go/+/refs/tags/go1.20.3:src/encoding/binary/varint.go;l=69

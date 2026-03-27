@@ -1,4 +1,4 @@
-// Copyright 2023 IPQualityScore LLC
+// Copyright 2026 IPQualityScore LLC
 
 use std::{
     error::Error,

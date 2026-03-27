@@ -1,4 +1,4 @@
-// Copyright 2023 IPQualityScore LLC
+// Copyright 2026 IPQualityScore LLC
 //! # IPQualityScore Flat File Database Reader
 //!
 //! The ipqs_db_reader library crate allows IPQualityScore customers to easily integrate our IP
@@ -21,6 +21,13 @@ mod utility {
         buffer[..4].copy_from_slice(bytes);
 
         u32::from_le_bytes(buffer) as u64
+    }
+    // interpret an array of four bytes as a Little Endian unsigned integer
+    pub(crate) fn eight_byte_int(bytes: &[u8]) -> u64 {
+        let mut buffer = [0u8; 8];
+        buffer[..8].copy_from_slice(bytes);
+
+        u64::from_le_bytes(buffer) as u64
     }
     // interpret an array of four bytes as a 32-bit floating-point number
     pub(crate) fn four_byte_float(bytes: &[u8]) -> f32 {

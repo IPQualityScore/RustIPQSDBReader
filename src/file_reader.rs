@@ -15,7 +15,8 @@ mod variable_length_int;
 
 pub mod record;
 
-const RUST_IPQS_READER_VERSION: u8 = 0x01;
+const RUST_IPQS_READER_VERSION1: u8 = 0x01;
+const RUST_IPQS_READER_VERSION2: u8 = 0x02;
 
 const IPV4_MAP: u8 = 0b0000_0001;
 const IPV6_MAP: u8 = 0b0000_0010;
@@ -31,6 +32,7 @@ const BINARY_DATA: u8 = 0b1000_0000;
 /// [IPQualityScore Flat File Database documentation](https://www.ipqualityscore.com/documentation/ip-reputation-database/overview)
 #[derive(Debug)]
 pub struct FileReader {
+    version: u8,
     reader: BufReader<File>,
     record_bytes: usize,
     tree_start: u64,
@@ -57,9 +59,9 @@ impl FileReader {
 
         //---------------- METADATA BEGIN
 
-        // first 11 bytes reserved for file metadata
-        let mut header = [0; 11];
-        reader.read_exact(&mut header)?;
+        // first 11 bytes reserved for file metadata in v1, 16 for v2
+        let mut header = [0; 16];
+        reader.read_exact(&mut header[0..11])?;
 
         // first byte of header holds file option details
         let binary_option = BinaryOption { data: header[0] };
@@ -77,8 +79,14 @@ impl FileReader {
         let is_blacklist = binary_option.has(BLACKLIST_FILE);
 
         // flat file db and library crate version must match
-        if header[1] != RUST_IPQS_READER_VERSION {
+        let version = header[1];
+        if (version != RUST_IPQS_READER_VERSION1) && (version != RUST_IPQS_READER_VERSION2) {
             return Err("invalid file version (EID 2)".into());
+        }
+
+        if version == RUST_IPQS_READER_VERSION2 {
+            //read the rest of the v2 header
+            reader.read_exact(&mut header[11..])?;
         }
 
         // column pairs
@@ -86,12 +94,12 @@ impl FileReader {
         // the tree begins at the end of the header
         // after the first 11 bytes, the remaining bytes in the header are column headers
         // each header is 24 bytes long
-        let tree_start = variable_length_int::uvarint64(&header[2..5])?;
+        let tree_start = variable_length_int::uvarint64(if version == 1 { &header[2..5] } else if version == 2 { &header[2..6] } else { unreachable!() })?;
         if tree_start == 0 {
             return Err("invalid file format, invalid header bytes (EID 3)".into());
         }
         let header_size: usize = tree_start.try_into()?;
-        let column_bytes_length = header_size - 11;
+        let column_bytes_length = header_size - if version == 1 { 11 } else if version == 2 { 16 } else { unreachable!() };
         if column_bytes_length == 0 {
             return Err("file appears to be invalid, no column data found (EID 4)".into());
         }
@@ -99,7 +107,7 @@ impl FileReader {
             return Err("invalid column data, too many or too few bytes (EID 5)".into());
         }
 
-        let record_bytes: usize = variable_length_int::uvarint64(&header[5..7])?.try_into()?;
+        let record_bytes: usize = variable_length_int::uvarint64(if version == 1 { &header[5..7] } else if version == 2 { &header[6..8] } else { unreachable!() })?.try_into()?;
         if record_bytes == 0 {
             return Err("invalid file format, invalid record bytes (EID 6)".into());
         }
@@ -148,6 +156,7 @@ impl FileReader {
         let tree_end: u64 = tree_start + total_tree;
 
         Ok(FileReader {
+            version,
             reader,
             binary_data,
             is_v6,
@@ -193,8 +202,11 @@ impl FileReader {
         let mut position: usize = 0; // bit within binary representation of ip address
         let mut previous: // maps bits within binary representation to node positions within tree
             HashMap<usize, u64> = HashMap::new(); // (for going back up tree if ip address not found)
-        let mut file_position = self.tree_start + 5; // start traversing tree just after tree header
+        let mut file_position = self.tree_start + if self.version == 1 { 5 } else if self.version == 2 { 9 } else { unreachable!() }; // start traversing tree just after tree header
         let mut node: Vec<u8> = vec![0u8; 8]; // each node has 2 ("left" and "right") 4-byte integer "pointers"
+        if self.version == 2 {
+            node.resize(16, 0);
+        }
         let mut binary_representation: Vec<bool> = Vec::new();
         match ip {
             IpAddr::V4(ipv4) => {
@@ -226,10 +238,18 @@ impl FileReader {
             self.reader.read_exact(&mut node)?;
             if binary_representation[position] {
                 // bit is 1 - go right
-                file_position = utility::four_byte_int(&node[4..8]);
+                if self.version == 1 {
+                    file_position = utility::four_byte_int(&node[4..8]);
+                } else if self.version == 2 {
+                    file_position = utility::eight_byte_int(&node[8..16]);
+                }
             } else {
                 // bit is 0 - go left
-                file_position = utility::four_byte_int(&node[0..4]);
+                if self.version == 1 {
+                    file_position = utility::four_byte_int(&node[0..4]);
+                } else if self.version == 2 {
+                    file_position = utility::eight_byte_int(&node[0..8]);
+                }
             }
 
             if !self.is_blacklist && file_position == 0 {
