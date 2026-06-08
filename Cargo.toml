@@ -1,7 +1,7 @@
 # Copyright 2026 IPQualityScore LLC
 [package]
 name = "ipqs_db_reader"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2021"
 description = "IPQualityScore Rust Flat File IP Address Reputation Database Reader"
 repository = "https://github.com/IPQualityScore/RustIPQSDBReader"

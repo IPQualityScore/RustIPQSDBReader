@@ -29,13 +29,13 @@ pub const IS_HOSTING_PROVIDER: u8 = 0x04;
 pub const ACTIVE_VPN: u8 = 0x08;
 pub const ACTIVE_TOR: u8 = 0x10;
 pub const PUBLIC_ACCESS_POINT: u8 = 0x20;
-// pub const RESERVED_ONE: u8 = 0x40;
-// pub const RESERVED_TWO: u8 = 0x80;
+pub const FREQUENT_ABUSER: u8 = 0x40;
+pub const TRUSTED_APPLICATION: u8 = 0x80;
 
 // byte 3;
-// pub const RESERVED_THREE: u8 = 0x01;
-// pub const RESERVED_FOUR: u8 = 0x02;
-// pub const RESERVED_FIVE: u8 = 0x04;
+pub const SHARED_IP: u8 = 0x01;
+pub const SECURITY_SCANNER: u8 = 0x02;
+pub const DYNAMIC_IP: u8 = 0x04;
 pub const CONNECTION_TYPE_ONE: u8 = 0x08;
 pub const CONNECTION_TYPE_TWO: u8 = 0x10;
 pub const CONNECTION_TYPE_THREE: u8 = 0x20;

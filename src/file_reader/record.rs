@@ -55,6 +55,11 @@ pub struct Record {
     active_vpn: Option<bool>,
     active_tor: Option<bool>,
     public_access_point: Option<bool>,
+    frequent_abuser: Option<bool>,
+    trusted_application: Option<bool>,
+    shared_ip: Option<bool>,
+    security_scanner: Option<bool>,
+    dynamic_ip: Option<bool>,
 
     #[cfg_attr(feature = "json", serde(skip_serializing))]
     columns: Vec<Column>,
@@ -95,7 +100,12 @@ Has Open Ports: {:#?}
 Is Hosting Provider: {:#?}
 Active VPN: {:#?}
 Active Tor: {:#?}
-Public Access Point: {:#?}",
+Public Access Point: {:#?}
+Frequent Abuser: {:#?}
+Trusted Application: {:#?}
+Shared IP: {:#?}
+Security Scanner: {:#?}
+Dynamic IP: {:#?}",
             self.connection_type,
             self.abuse_velocity,
             self.country,
@@ -127,6 +137,11 @@ Public Access Point: {:#?}",
             self.active_vpn,
             self.active_tor,
             self.public_access_point,
+            self.frequent_abuser,
+            self.trusted_application,
+            self.shared_ip,
+            self.security_scanner,
+            self.dynamic_ip
         )
     }
 }
@@ -156,6 +171,13 @@ impl Record {
             record.active_vpn = Some(second_byte.has(flag::ACTIVE_VPN));
             record.active_tor = Some(second_byte.has(flag::ACTIVE_TOR));
             record.public_access_point = Some(second_byte.has(flag::PUBLIC_ACCESS_POINT));
+            record.frequent_abuser = Some(second_byte.has(flag::FREQUENT_ABUSER));
+            record.trusted_application = Some(second_byte.has(flag::TRUSTED_APPLICATION));
+            // byte 3
+            let third_byte = BinaryOption { data: raw[2] };
+            record.shared_ip = Some(third_byte.has(flag::SHARED_IP));
+            record.security_scanner = Some(third_byte.has(flag::SECURITY_SCANNER));
+            record.dynamic_ip = Some(third_byte.has(flag::DYNAMIC_IP));
 
             current_byte = 2;
         }
@@ -262,7 +284,7 @@ impl Record {
                     });
                     current_byte += 1;
                 }
-                column_name => {
+                _column_name => {
                     let mut value = Default::default();
                     if column.record_type.has(flag::STRING_DATA) {
                         let offset = if file.version == 1 {
@@ -371,6 +393,26 @@ impl Record {
 
     pub fn public_access_point(&self) -> Option<bool> {
         self.public_access_point
+    }
+
+    pub fn frequent_abuser(&self) -> Option<bool> {
+        self.frequent_abuser
+    }
+
+    pub fn trusted_application(&self) -> Option<bool> {
+        self.trusted_application
+    }
+
+    pub fn shared_ip(&self) -> Option<bool> {
+        self.shared_ip
+    }
+
+    pub fn security_scanner(&self) -> Option<bool> {
+        self.security_scanner
+    }
+
+    pub fn dynamic_ip(&self) -> Option<bool> {
+        self.dynamic_ip
     }
 
     pub fn connection_type(&self) -> &str {
